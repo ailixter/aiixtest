@@ -3,6 +3,7 @@
 /*
  * (C) 2015, AII (Alexey Ilyin).
  */
+
 class AIIXTestContext
 {
     public function setFilepath ($fname) {
