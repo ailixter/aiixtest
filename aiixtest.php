@@ -35,14 +35,55 @@ class AIIXTestContext
         $this->vars = get_defined_vars();
     }
 
-    public $what;
+    public function test () {
+        $filename = AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt';
+        $current  = serialize($this->return);
+        if (!file_exists($filename)) {
+            file_put_contents($filename, $current);
+            return $this->result = true;
+        }
+        $previous = file_get_contents($filename);
+        if ($this->call("compare_$this->compare", $current, $previous)) {
+            return $this->result = true;
+        }
+        else {
+            $this->call("retest_$this->retest", $filename, $current);
+            $this->expected = unserialize($previous);
+            return $this->result = false;
+        }
+    }
+
+    protected function call ($name) {
+        if (method_exists($this, $name)) {
+            return call_user_func_array(array($this,$name), array_slice(func_get_args(), 1));
+        }
+        echo "\n\n***** Warning: method $name is not supported and so skipped\n\n";
+    }
+
+    protected $compare = 'eq', $retest = 'default';
+
+    protected function compare_eq ($current, $previous) {
+        return $current === $previous;
+    }
+
+    protected function retest_default () {
+        return false;
+    }
+
+    protected function retest_replace ($filename, $current) {
+        file_put_contents($filename, $current);
+    }
+
+    protected function retest_delete ($filename) {
+        unlink($filename);
+    }
 
     public function replace_previous () {
-        $this->what = 'replace';
+        $this->retest = 'replace';
     }
 
     public function delete_previous () {
-        $this->what = 'delete';
+        $this->retest = 'delete';
     }
 }
 
@@ -199,13 +240,15 @@ class AIIXTest
             echo "\n",$line,"\n";
             $test->exec();
             echo "\n",$line,"\n";
-            echo "$test->fname returned: ";
+            echo "returned: ";
             var_dump($test->return);
+            if ($test->test() !== true) {
+                echo "\nEXPECTED: ";
+                var_dump($test->expected);
+            }
             echo $line,"\n";
-            echo "Vars after $test->fname:\n";
+            echo "Vars after:\n";
             $this->printVars($test->vars);
-            $test->result = $this->test($test);
-            if ($test->result !== true) echo "\n$test->result\n";
         }
         return $test;
     }
@@ -217,21 +260,6 @@ class AIIXTest
             echo "$$key = ";
             //var_dump($value);
             var_export($value); echo ";\n";
-        }
-    }
-
-    protected function test (AIIXTestContext $test) {
-        $filename = self::CACHE.'/'.strtr($test->fname, '/:\\', '---').'.txt';
-        $current  = serialize($test->return);
-        if (!file_exists($filename)) {
-            file_put_contents($filename, $current);
-            return true;
-        }
-        $previous = file_get_contents($filename);
-        if ($current === $previous) return true;
-        switch ($test->what) {
-            case 'replace': file_put_contents($filename, $current); break;
-            case 'delete':  unlink($filename); break;
         }
     }
 
@@ -250,7 +278,7 @@ class AIIXTest
 
     public function result_require_test ($fname) {
         $test = $this->getContext('test', $fname);
-        return !empty($test->result);
+        return !empty($test->result);//TODO ???
     }
 
     function abort ($message) {
