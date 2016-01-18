@@ -257,7 +257,7 @@ class AIIXTest
         foreach ($vars as $key => $value) {
             echo "\n";
             isset(self::$SHARED[$key]) and print('shared ');
-            echo "$$key = ";
+            echo "$$key: ";
             //var_dump($value);
             var_export($value); echo ";\n";
         }
