@@ -25,65 +25,94 @@ class AIIXTestContext
     public function exec () {
         extract(AIIXTest::$SHARED, EXTR_PREFIX_INVALID|EXTR_REFS, 'var_');
         try {
-            $this->return = include $this->filepath;
+            $return = include $this->filepath;
         }
         catch (Exception $e) {
             echo "\n$e\n";
-            $this->return = $e;
+            $return = $e;
             unset($e);
         }
+        $this->return = $return instanceof AIIXTestResult ?
+                        $return : new AIIXTestResult($return);
+        unset($return);
         $this->vars = get_defined_vars();
     }
 
     public function test () {
-        $filename = AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt';
-        $current  = serialize($this->return);
-        if (!file_exists($filename)) {
-            file_put_contents($filename, $current);
-            return $this->result = true;
-        }
-        $previous = file_get_contents($filename);
-        if ($this->call("compare_$this->compare", $current, $previous)) {
-            return $this->result = true;
-        }
-        else {
-            $this->call("retest_$this->retest", $filename, $current);
-            $this->expected = unserialize($previous);
-            return $this->result = false;
-        }
+        return $this->result = $this->return->check($this,
+            AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt');
     }
 
-    protected function call ($name) {
+    /*protected function call ($name) {
         if (method_exists($this, $name)) {
             return call_user_func_array(array($this,$name), array_slice(func_get_args(), 1));
         }
-        echo "\n\n***** Warning: method $name is not supported and so skipped\n\n";
-    }
+        echo "\n\n***** Warning: method $name is not supported and so that skipped\n\n";
+    }*/
 
-    protected $compare = 'eq', $retest = 'default';
-
-    protected function compare_eq ($current, $previous) {
-        return $current === $previous;
-    }
-
-    protected function retest_default () {
-        return false;
-    }
-
-    protected function retest_replace ($filename, $current) {
-        file_put_contents($filename, $current);
-    }
-
-    protected function retest_delete ($filename) {
-        unlink($filename);
+    public function is_true () {
+        return new AIIXTestResultIsTrue(func_get_args());
     }
 
     public function replace_previous () {
-        $this->retest = 'replace';
+        return new AIIXTestResultReplacePrev(func_get_args());
     }
 
     public function delete_previous () {
-        $this->retest = 'delete';
+        return new AIIXTestResultDeletePrev(func_get_args());
+    }
+}
+
+class AIIXTestResult
+{
+    public $result;
+
+    public function __construct ($result) {
+        $this->result = $result;
+    }
+
+    public function check (AIIXTestContext $test, $filename) {
+        $current = serialize($this->result);
+        if (!file_exists($filename)) {
+            file_put_contents($filename, $current);
+            return true;
+        }
+        $previous = file_get_contents($filename);
+        if ($current === $previous) return true;
+        $this->expected = unserialize($previous);
+        return false;
+    }
+
+    public function show ($passed) {
+        return !$passed;
+    }
+}
+
+class AIIXTestResultIsTrue extends AIIXTestResult
+{
+    public $expected = true;
+    public function check (AIIXTestContext $test, $filename) {
+        return !array_filter($this->result, function ($result) {
+            if (is_bool($result)) return $result !== true;
+            echo("***** is_true(): got ".gettype($result).", not boolean\n");//TODO
+            return true;
+        });
+    }
+}
+
+class AIIXTestResultReplacePrev extends AIIXTestResult
+{
+    public function check (AIIXTestContext $test, $filename) {
+        file_put_contents($filename, serialize($this->result));
+        return true;
+    }
+}
+
+class AIIXTestResultDeletePrev extends AIIXTestResult
+{
+    public function check (AIIXTestContext $test, $filename) {
+        unlink($filename);
+        return true;
     }
 }
 
@@ -96,7 +125,12 @@ class AIIXTest
     public static $SHARED = array();
 
     protected function __construct () {
-        $this->prev_errhandler = set_error_handler(array($this,'errhandler'));
+        assert_options(ASSERT_ACTIVE, 1);
+        assert_options(ASSERT_WARNING, 0);
+        assert_options(ASSERT_QUIET_EVAL, 1);
+        $this->prev_assert_bail = assert_options(ASSERT_BAIL, 0);
+        $this->prev_asrhandler  = assert_options(ASSERT_CALLBACK, array($this,'asrhandler'));
+        $this->prev_errhandler  = set_error_handler(array($this,'errhandler'));
         //$this->prev_exphandler = set_exception_handler(array($this,'exphandler'));
         register_shutdown_function(array($this,'check_for_fatal'));
         $this->parseCmdLine();
@@ -231,7 +265,11 @@ class AIIXTest
     }
 
     protected function print_test (AIIXTestContext $test) {
-        printf("\n#===%'=-72s===#\n", "[ $test->fname ]");
+        $line = str_repeat('=', 78);
+        //printf("\n#===%'=-72s===#\n", "[ $test->fname ]");
+        echo "\n\no",$line,"o\n";
+        printf("|   %' -72s   |", $test->fname);
+        echo "\no",$line,"o\n";
         $test->printCode();
         $line = str_repeat('-', 80);
         if ($this->evalPragmas('result', $test) === false)
@@ -240,21 +278,25 @@ class AIIXTest
             echo "\n",$line,"\n";
             $test->exec();
             echo "\n",$line,"\n";
-            echo "returned: ";
-            var_dump($test->return);
-            if ($test->test() !== true) {
-                echo "\nEXPECTED: ";
-                var_dump($test->expected);
+            $passed = $test->test();
+            if ($test->return->show($passed)) {
+                echo "RETURNED: ";
+                var_dump($test->return->result);
             }
-            echo $line,"\n";
+            if (!$passed) {
+                echo "\nEXPECTED: ";
+                var_dump($test->return->expected);
+                echo $line,"\n";
+            }
             echo "Vars after:\n";
-            $this->printVars($test->vars);
+            $this->printVars($test->vars, true);
         }
         return $test;
     }
 
-    protected function printVars (array $vars) {
+    protected function printVars (array $vars, $skip = false) {
         foreach ($vars as $key => $value) {
+            if ($skip && $key[0] === '_') continue;
             echo "\n";
             isset(self::$SHARED[$key]) and print('shared ');
             echo "$$key: ";
@@ -286,11 +328,16 @@ class AIIXTest
     }
 
 
-    protected $prev_errhandler = 'undefined';//,$prev_exphandler = 'undefined';
+    protected $prev_errhandler = 'undefined', $prev_asrhandler = 'undefined';
 
 //    function exphandler ($exception) {
 //        $this->errhandler(null, (string)$exception);
 //    }
+
+    function asrhandler($file, $line, $code) {
+        $msg = $this->errmessage(null, $code, $file, $line);
+        print("\n***** Assertion failed: $msg\n");
+    }
 
     function errhandler ($errno, $errstr, $errfile=null, $errline=null, $errcontext=null) {
         $msg = $this->errmessage($errno, $errstr, $errfile, $errline, $errcontext);
