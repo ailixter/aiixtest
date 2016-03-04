@@ -49,18 +49,6 @@ class AIIXTestContext
         }
         echo "\n\n***** Warning: method $name is not supported and so that skipped\n\n";
     }*/
-
-    public function is_true () {
-        return new AIIXTestResultIsTrue(func_get_args());
-    }
-
-    public function replace_previous () {
-        return new AIIXTestResultReplacePrev(func_get_args());
-    }
-
-    public function delete_previous () {
-        return new AIIXTestResultDeletePrev(func_get_args());
-    }
 }
 
 class AIIXTestResult
@@ -118,6 +106,18 @@ class AIIXTestResultDeletePrev extends AIIXTestResult
 
 class AIIXTest
 {
+    public function is_true () {
+        return new AIIXTestResultIsTrue(func_get_args());
+    }
+
+    public function replace_previous () {
+        return new AIIXTestResultReplacePrev(func_get_args());
+    }
+
+    public function delete_previous () {
+        return new AIIXTestResultDeletePrev(func_get_args());
+    }
+
     protected $init = array(), $test = array(), $path, $cwd;
 
     protected static $inst;
@@ -136,7 +136,7 @@ class AIIXTest
         $this->parseCmdLine();
     }
 
-    function parseCmdLine () {
+    protected function parseCmdLine () {
         $this->cwd = getcwd();
         global $argv;
         $stage = false;
@@ -323,7 +323,7 @@ class AIIXTest
         return !empty($test->result);//TODO ???
     }
 
-    function abort ($message) {
+    protected function abort ($message) {
         exit ("\nAborted: $message\n");
     }
 
