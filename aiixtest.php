@@ -106,15 +106,15 @@ class AIIXTestResultDeletePrev extends AIIXTestResult
 
 class AIIXTest
 {
-    public function is_true () {
+    public static function is_true () {
         return new AIIXTestResultIsTrue(func_get_args());
     }
 
-    public function replace_previous () {
+    public static function replace_previous () {
         return new AIIXTestResultReplacePrev(func_get_args());
     }
 
-    public function delete_previous () {
+    public static function delete_previous () {
         return new AIIXTestResultDeletePrev(func_get_args());
     }
 
