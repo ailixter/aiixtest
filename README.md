@@ -39,3 +39,17 @@ $argv: array (
 
 $arg: false;
 ```
+
+All what it needs is a test directory, which structure follows:
+```
+my-tests
+    |
+    \-init (initialization files)
+    |
+    \-test (teat files)
+```
+Then a teisting would be started with:
+```
+$ cd my-tests
+$ php aiixtest.php my-tests
+``
