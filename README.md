@@ -57,6 +57,7 @@ Then a testing could be started with:
 $ cd my-project
 $ php aiixtest.php my-tests
 ```
+See even more [at the wiki](https://github.com/ailixter/aiixtest/wiki)
 
 ## Installation ##
 
