@@ -1,4 +1,4 @@
-#  aiixtest
+#  aiixtest #
 
 ## php test snippets runner
 
@@ -57,3 +57,11 @@ Then a testing could be started with:
 $ cd my-project
 $ php aiixtest.php my-tests
 ```
+
+## Installation ##
+
+```
+$ git clone https://github.com/ailixter/aiixtest.git
+```
+
+The [archive could just be downloaded](https://github.com/ailixter/aiixtest/archive/master.zip) and unarchived.
