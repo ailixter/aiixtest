@@ -149,6 +149,10 @@ class AIIXTest
             }
             if ($arg[0] === '-') {
                 for ($i = 1, $n = strlen($arg); $i < $n; ++$i) {
+                    if (!isset($this->sw[$arg[$i]])) {
+                        echo "unknown switch -{$arg[$i]} skipped\n";
+                        continue;
+                    }
                     $this->sw[$arg[$i]] = $arg[$i];
                 }
             }
@@ -246,6 +250,17 @@ class AIIXTest
     const SW_SHORT_HEADING    = 'H';
     const SW_FAILED_ONLY      = 'X';
 
+    private $sw = array(
+        self::SW_HIDE_INIT_OUTPUT => false,
+        self::SW_HIDE_INIT_VARS   => false,
+        self::SW_HIDE_TEST_OUTPUT => false,
+        self::SW_HIDE_TEST_VARS   => false,
+        self::SW_HIDE_TEST_CODE   => false,
+        self::SW_HIDE_TEST_RETURN => false,
+        self::SW_SHORT_HEADING    => false,
+        self::SW_FAILED_ONLY      => false
+    );
+
     public function start () {
         is_dir(self::CACHE) or mkdir(self::CACHE);
         echo 'PHP ',PHP_VERSION,"\n";
@@ -317,19 +332,20 @@ class AIIXTest
             return true;
         }
         else {
-            echo $test->fname;
+            echo $test->fname, ' ';
             return false;
         }
     }
 
     protected function print_test (AIIXTestContext $test) {
-        $this->printTestHeading($test);
+        $line = str_repeat('-', 80);
+        $short = !$this->printTestHeading($test);
 
         if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
+            $short and print "\n$line\n";
             $test->printCode();
         }
 
-        $line = str_repeat('-', 80);
         if (!is_null($passed = $this->execTest($test,
             !empty($this->sw[self::SW_HIDE_TEST_OUTPUT])))) {
             if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
@@ -344,7 +360,7 @@ class AIIXTest
                 }
             }
             else if (!$passed) {
-                echo ": FAILED!\n";
+                echo "FAILED!\n";
             }
             else {
                 echo "\n";
@@ -366,10 +382,10 @@ class AIIXTest
     protected function print_testx (AIIXTestContext $test) {
         if (!is_null($passed = $this->execTest($test, true))) {//sic!
             if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
+                $line = str_repeat('-', 80);
                 if ($test->return->show($passed)) {
                     $short = !$this->printTestHeading($test);
                     if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
-                        $line = str_repeat('-', 80);
                         $short and print "\n$line\n";
                         $test->printCode();
                         echo "\n$line";
@@ -378,18 +394,14 @@ class AIIXTest
                     var_dump($test->return->result);
                 }
                 if (!$passed) {
-                    echo "\nEXPECTED: ";
+                    echo "EXPECTED: ";
                     var_dump($test->return->expected);
                     echo $line,"\n";
                 }
             }
             else if (!$passed) {
-                echo $test->fname, ": FAILED!\n";
+                echo $test->fname, " FAILED!\n";
             }
-//            else {
-//                echo "\n";
-//            }
-            //echo "\n";
         }
 
         return $test;
@@ -446,7 +458,6 @@ class AIIXTest
 
 
     protected $prev_errhandler = 'undefined', $prev_asrhandler = 'undefined';
-    private $sw;
 
 //    function exphandler ($exception) {
 //        $this->errhandler(null, (string)$exception);
