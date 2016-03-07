@@ -8,7 +8,7 @@ class AIIXTestContext
 {
     public function setFilepath ($fname) {
         if (!$this->filepath = realpath($fname)) {
-	   echo "\n\n***** ERROR: File $this->cwd/$fname not found and so skipped\n\n";
+	   echo "\n\n***** ERROR: File $this->cwd/$fname not found and so that skipped\n\n";
            return false;
 	}
         $this->fname = $fname;
@@ -240,6 +240,11 @@ class AIIXTest
         return self::$inst = new AIIXTest();
     }
 
+    const SLINE =
+'--------------------------------------------------------------------------------';
+    const DLINE =
+'o==============================================================================o';
+
     const CACHE = '.cache';
     const SW_HIDE_INIT_OUTPUT = 'I';
     const SW_HIDE_INIT_VARS   = 'W';
@@ -325,10 +330,9 @@ class AIIXTest
 
     private function printTestHeading (AIIXTestContext $test) {
         if (empty($this->sw[self::SW_SHORT_HEADING])) {
-            $line = str_repeat('=', 78);
-            echo "\n\no",$line,"o\n";
+            echo "\n\n",self::DLINE,"\n";
             printf("|   %' -72s   |", $test->fname);
-            echo "\no",$line,"o\n";
+            echo "\n",self::DLINE,"\n";
             return true;
         }
         else {
@@ -338,11 +342,10 @@ class AIIXTest
     }
 
     protected function print_test (AIIXTestContext $test) {
-        $line = str_repeat('-', 80);
         $short = !$this->printTestHeading($test);
 
         if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
-            $short and print "\n$line\n";
+            $short and print "\n".self::SLINE."\n";
             $test->printCode();
         }
 
@@ -350,13 +353,14 @@ class AIIXTest
             !empty($this->sw[self::SW_HIDE_TEST_OUTPUT])))) {
             if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
                 if ($test->return->show($passed)) {
-                    echo "\nRETURNED: ";
+                    $short and print "\n";
+                    echo "RETURNED: ";
                     var_dump($test->return->result);
                 }
                 if (!$passed) {
-                    echo "\nEXPECTED: ";
+                    echo "EXPECTED: ";
                     var_dump($test->return->expected);
-                    echo $line,"\n";
+                    echo self::SLINE,"\n";
                 }
             }
             else if (!$passed) {
@@ -382,13 +386,12 @@ class AIIXTest
     protected function print_testx (AIIXTestContext $test) {
         if (!is_null($passed = $this->execTest($test, true))) {//sic!
             if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
-                $line = str_repeat('-', 80);
                 if ($test->return->show($passed)) {
                     $short = !$this->printTestHeading($test);
                     if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
-                        $short and print "\n$line\n";
+                        $short and print "\n".self::SLINE."\n";
                         $test->printCode();
-                        echo "\n$line";
+                        echo "\n",self::SLINE;
                     }
                     echo "\nRETURNED: ";
                     var_dump($test->return->result);
@@ -396,7 +399,7 @@ class AIIXTest
                 if (!$passed) {
                     echo "EXPECTED: ";
                     var_dump($test->return->expected);
-                    echo $line,"\n";
+                    echo self::SLINE,"\n";
                 }
             }
             else if (!$passed) {
@@ -408,17 +411,16 @@ class AIIXTest
     }
 
     protected function execTest (AIIXTestContext $test, $quiet = false) {
-        $line = str_repeat('-', 80);
         if ($this->evalPragmas('result', $test) === false) {
             echo "\nSkipped because of dependencies\n";
             return null;
         }
         else {
             if ($quiet) ob_start();
-            else echo "\n",$line,"\n";
+            else echo "\n",self::SLINE,"\n";
             $test->exec();
             if ($quiet) ob_clean();
-            else echo "\n",$line,"\n";
+            else echo "\n",self::SLINE,"\n";
             return $test->test();
         }
     }
