@@ -44,12 +44,16 @@ All what it needs is a test directory, which structure follows:
 ```
 my-tests
     |
-    \-init (initialization files)
+    \-init
+    |   |
+    |   \-(initialization files)*
     |
-    \-test (teat files)
+    \-test
+        |
+        \-(test files)+
 ```
-Then a teisting would be started with:
+Then a testing could be started with:
 ```
-$ cd my-tests
+$ cd my-project
 $ php aiixtest.php my-tests
-``
+```
