@@ -2,7 +2,7 @@
 
 ## php test snippets runner
 
-Yes, "snippets" means snippets. Any valid php file could be run, its $vars
+Yes, "snippets" means snippets. *Any valid php file* could be run, its $vars
 are printed and its return is remembered and analysed.
 
 For example:
