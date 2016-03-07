@@ -132,7 +132,7 @@ class AIIXTest
         $this->prev_asrhandler  = assert_options(ASSERT_CALLBACK, array($this,'asrhandler'));
         $this->prev_errhandler  = set_error_handler(array($this,'errhandler'));
         //$this->prev_exphandler = set_exception_handler(array($this,'exphandler'));
-        register_shutdown_function(array($this,'check_for_fatal'));
+        register_shutdown_function(array($this,'shthandler'));
         $this->parseCmdLine();
     }
 
@@ -147,7 +147,12 @@ class AIIXTest
                     $arg = next($argv);
                     break;
             }
-            if (!$stage) {
+            if ($arg[0] === '-') {
+                for ($i = 1, $n = strlen($arg); $i < $n; ++$i) {
+                    $this->sw[$arg[$i]] = $arg[$i];
+                }
+            }
+            else if (!$stage) {
                 $this->path
                     and $this->abort("on $arg - path $this->path is already set");
                 $this->path = realpath($arg)
@@ -162,8 +167,10 @@ class AIIXTest
         }
     }
 
-    protected static function filename ($stage, $fname) {
+    protected function filename ($stage, $fname) {
         $file = pathinfo($fname);
+        isset($file['dirname'])
+        or $this->abort("no file specified for $stage");
         $file['dirname'] !== '.'
         or  $file['dirname'] = $stage;
         empty($file['extension'])
@@ -172,7 +179,7 @@ class AIIXTest
     }
 
     protected function addFile ($stage, $fname) {
-        $fname = self::filename ($stage, $fname);
+        $fname = $this->filename ($stage, $fname);
         file_exists($fname)
         or $this->abort("file $fname does not exists");
         isset($this->{$stage}[$fname])
@@ -180,7 +187,7 @@ class AIIXTest
     }
 
     protected function getContext ($stage, $fname) {
-        $fname = self::filename ($stage, $fname);
+        $fname = $this->filename ($stage, $fname);
         if (isset($this->{$stage}[$fname])) {
             return $this->{$stage}[$fname];
         }
@@ -230,13 +237,24 @@ class AIIXTest
     }
 
     const CACHE = '.cache';
+    const SW_HIDE_INIT_OUTPUT = 'I';
+    const SW_HIDE_INIT_VARS   = 'W';
+    const SW_HIDE_TEST_OUTPUT = 'T';
+    const SW_HIDE_TEST_VARS   = 'V';
+    const SW_HIDE_TEST_CODE   = 'C';
+    const SW_HIDE_TEST_RETURN = 'R';
+    const SW_SHORT_HEADING    = 'H';
+    const SW_FAILED_ONLY      = 'X';
 
     public function start () {
         is_dir(self::CACHE) or mkdir(self::CACHE);
         echo 'PHP ',PHP_VERSION,"\n";
         $this->run('init');
-        echo "\nInitial Vars: \n";
-        $this->printVars(self::$SHARED);
+        if (empty($this->sw[self::SW_HIDE_INIT_VARS])) {
+            echo "\nInitial Vars: \n";
+            $this->printVars(self::$SHARED);
+        }
+        echo "\n";
         $this->run('test');
     }
 
@@ -248,50 +266,149 @@ class AIIXTest
         }
         foreach ($this->{$stage} as $context) {
             if (!$context) continue; // skipped
-            $this->{"print_$stage"}($context);
+            $method = "print_$stage";
+            empty($this->sw[self::SW_FAILED_ONLY])
+            or $method .= 'x';
+            $this->{$method}($context);
         }
     }
 
     protected function print_init (AIIXTestContext $init) {
-        printf("----%'--72s----\n", "[ $init->fname ]");
+        if (empty($this->sw[self::SW_SHORT_HEADING])) {
+            printf("----%'--72s----\n", "[ $init->fname ]");
+        }
+        else {
+            echo $init->fname;
+        }
+
+        $this->execInit($init, !empty($this->sw[self::SW_HIDE_INIT_OUTPUT]));
+
+        if (!empty($this->sw[self::SW_SHORT_HEADING])) {
+            echo "\n";
+        }
+
+        return $init;
+    }
+
+    protected function print_initx (AIIXTestContext $init) {
+        $this->execInit($init, true);
+        return $init;
+    }
+
+    protected function execInit (AIIXTestContext $init, $quiet = false) {
         $temp = $this->evalPragmas('return', $init);
         unset($init->code);
-        if ($temp !== false) {
+        if ($temp === false)
+            $init = false;
+        else {
+            $quiet and ob_start();
             $init->exec();
+            $quiet and ob_clean(); //TODO on failure ???
             self::$SHARED = array_merge(self::$SHARED, $init->vars);
+        }
+    }
+
+    private function printTestHeading (AIIXTestContext $test) {
+        if (empty($this->sw[self::SW_SHORT_HEADING])) {
+            $line = str_repeat('=', 78);
+            echo "\n\no",$line,"o\n";
+            printf("|   %' -72s   |", $test->fname);
+            echo "\no",$line,"o\n";
             return true;
         }
-        return false;
+        else {
+            echo $test->fname;
+            return false;
+        }
     }
 
     protected function print_test (AIIXTestContext $test) {
-        $line = str_repeat('=', 78);
-        //printf("\n#===%'=-72s===#\n", "[ $test->fname ]");
-        echo "\n\no",$line,"o\n";
-        printf("|   %' -72s   |", $test->fname);
-        echo "\no",$line,"o\n";
-        $test->printCode();
-        $line = str_repeat('-', 80);
-        if ($this->evalPragmas('result', $test) === false)
-            echo "\nSkipped because of dependencies\n";
-        else {
-            echo "\n",$line,"\n";
-            $test->exec();
-            echo "\n",$line,"\n";
-            $passed = $test->test();
-            if ($test->return->show($passed)) {
-                echo "RETURNED: ";
-                var_dump($test->return->result);
-            }
-            if (!$passed) {
-                echo "\nEXPECTED: ";
-                var_dump($test->return->expected);
-                echo $line,"\n";
-            }
-            echo "Vars after:\n";
-            $this->printVars($test->vars, true);
+        $this->printTestHeading($test);
+
+        if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
+            $test->printCode();
         }
+
+        $line = str_repeat('-', 80);
+        if (!is_null($passed = $this->execTest($test,
+            !empty($this->sw[self::SW_HIDE_TEST_OUTPUT])))) {
+            if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
+                if ($test->return->show($passed)) {
+                    echo "\nRETURNED: ";
+                    var_dump($test->return->result);
+                }
+                if (!$passed) {
+                    echo "\nEXPECTED: ";
+                    var_dump($test->return->expected);
+                    echo $line,"\n";
+                }
+            }
+            else if (!$passed) {
+                echo ": FAILED!\n";
+            }
+            else {
+                echo "\n";
+            }
+
+            if (empty($this->sw[self::SW_HIDE_TEST_VARS])) {
+                echo "Vars after:\n";
+                $this->printVars($test->vars, true);
+            }
+        }
+
+        if (!empty($this->sw[self::SW_SHORT_HEADING])) {
+            echo "\n";
+        }
+
         return $test;
+    }
+
+    protected function print_testx (AIIXTestContext $test) {
+        if (!is_null($passed = $this->execTest($test, true))) {//sic!
+            if (empty($this->sw[self::SW_HIDE_TEST_RETURN])) {
+                if ($test->return->show($passed)) {
+                    $short = !$this->printTestHeading($test);
+                    if (empty($this->sw[self::SW_HIDE_TEST_CODE])) {
+                        $line = str_repeat('-', 80);
+                        $short and print "\n$line\n";
+                        $test->printCode();
+                        echo "\n$line";
+                    }
+                    echo "\nRETURNED: ";
+                    var_dump($test->return->result);
+                }
+                if (!$passed) {
+                    echo "\nEXPECTED: ";
+                    var_dump($test->return->expected);
+                    echo $line,"\n";
+                }
+            }
+            else if (!$passed) {
+                echo $test->fname, ": FAILED!\n";
+            }
+//            else {
+//                echo "\n";
+//            }
+            //echo "\n";
+        }
+
+        return $test;
+    }
+
+    protected function execTest (AIIXTestContext $test, $quiet = false) {
+        $line = str_repeat('-', 80);
+        if ($this->evalPragmas('result', $test) === false) {
+            echo "\nSkipped because of dependencies\n";
+            return null;
+        }
+        else {
+            if ($quiet) ob_start();
+            else echo "\n",$line,"\n";
+            $test->exec();
+            if ($quiet) ob_clean();
+            else echo "\n",$line,"\n";
+            return $test->test();
+        }
     }
 
     protected function printVars (array $vars, $skip = false) {
@@ -329,6 +446,7 @@ class AIIXTest
 
 
     protected $prev_errhandler = 'undefined', $prev_asrhandler = 'undefined';
+    private $sw;
 
 //    function exphandler ($exception) {
 //        $this->errhandler(null, (string)$exception);
@@ -345,7 +463,7 @@ class AIIXTest
         return true;
     }
 
-    function check_for_fatal () {
+    function shthandler () {
         echo str_repeat('-', 80), "\n";
         if ($error = error_get_last()) {
             $this->errhandler($error['type'], $error['message'], $error['file'], $error['line']);
