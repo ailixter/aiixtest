@@ -81,7 +81,7 @@ class AIIXTestResultAssertion extends AIIXTestResult
 
 class AIIXTestResultIsTrue extends AIIXTestResultAssertion
 {
-    protected function is_empty ($result) {
+    protected function isEmpty ($result) {
         if (is_bool($result)) return $result !== true;
         echo("***** is_true(): got ".gettype($result).", not boolean\n"); //TODO
         return true;
