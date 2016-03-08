@@ -1,4 +1,4 @@
-<?php //!require_test('newtest')
+<?php
 
 $var = 'a string';
 
