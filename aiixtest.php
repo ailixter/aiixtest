@@ -42,18 +42,11 @@ class AIIXTestContext
         return $this->result = $this->return->check($this,
             AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt');
     }
-
-    /*protected function call ($name) {
-        if (method_exists($this, $name)) {
-            return call_user_func_array(array($this,$name), array_slice(func_get_args(), 1));
-        }
-        echo "\n\n***** Warning: method $name is not supported and so that skipped\n\n";
-    }*/
 }
 
 class AIIXTestResult
 {
-    public $result;
+    public $result, $expected;
 
     public function __construct ($result) {
         $this->result = $result;
@@ -76,15 +69,22 @@ class AIIXTestResult
     }
 }
 
-class AIIXTestResultIsTrue extends AIIXTestResult
+class AIIXTestResultAssertion extends AIIXTestResult
 {
-    public $expected = true;
     public function check (AIIXTestContext $test, $filename) {
-        return !array_filter($this->result, function ($result) {
-            if (is_bool($result)) return $result !== true;
-            echo("***** is_true(): got ".gettype($result).", not boolean\n");//TODO
-            return true;
-        });
+        return !array_filter($this->result, array($this, 'isEmpty'));
+    }
+    protected function isEmpty ($result) {
+        return empty($result);
+    }
+}
+
+class AIIXTestResultIsTrue extends AIIXTestResultAssertion
+{
+    protected function is_empty ($result) {
+        if (is_bool($result)) return $result !== true;
+        echo("***** is_true(): got ".gettype($result).", not boolean\n"); //TODO
+        return true;
     }
 }
 
@@ -106,6 +106,10 @@ class AIIXTestResultDeletePrev extends AIIXTestResult
 
 class AIIXTest
 {
+    public static function assertion () {
+        return new AIIXTestResultAssertion(func_get_args());
+    }
+
     public static function is_true () {
         return new AIIXTestResultIsTrue(func_get_args());
     }
