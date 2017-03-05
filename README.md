@@ -65,4 +65,4 @@ See even more [at the wiki](https://github.com/ailixter/aiixtest/wiki)
 $ git clone https://github.com/ailixter/aiixtest.git
 ```
 
-The [archive could just be downloaded](https://github.com/ailixter/aiixtest/archive/master.zip) and unarchived.
+The [archive  could just be downloaded](https://github.com/ailixter/aiixtest/archive/master.zip) and unarchived.
