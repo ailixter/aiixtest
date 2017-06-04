@@ -431,7 +431,7 @@ class AIIXTest
 
     protected function printVars (array $vars, $skip = false) {
         foreach ($vars as $key => $value) {
-            if ($skip && $key[0] === '_') continue;
+            if ($skip && isset($key[0]) && $key[0] === '_') continue;
             echo "\n";
             isset(self::$SHARED[$key]) and print('shared ');
             echo "$$key: ";
