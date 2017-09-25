@@ -6,6 +6,26 @@
 
 class AIIXTestContext
 {
+    private $filepath;
+    private $cwd;
+    /**
+     * @var string
+     */
+    public $fname;
+    /**
+     * @var array
+     */
+    public $code;
+    /**
+     * @var AIIXTestResult
+     */
+    public $return;
+    /**
+     * @var array
+     */
+    public $vars;
+    public $marks = array();
+
     public function setFilepath ($fname) {
         if (!$this->filepath = realpath($fname)) {
 	   echo "\n\n***** ERROR: File $this->cwd/$fname not found and so that skipped\n\n";
@@ -41,6 +61,10 @@ class AIIXTestContext
     public function test () {
         return $this->result = $this->return->check($this,
             AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt');
+    }
+
+    protected function mark () {
+        $this->marks[] = array(microtime(true), memory_get_usage());
     }
 }
 
@@ -378,6 +402,10 @@ class AIIXTest
                 echo "Vars after:\n";
                 $this->printVars($test->vars, true);
             }
+
+            if ($test->marks) {
+                $this->printMarks($test->marks);
+            }
         }
 
         if (!empty($this->sw[self::SW_SHORT_HEADING])) {
@@ -439,6 +467,46 @@ class AIIXTest
             var_export($value); echo ";\n";
         }
     }
+
+    protected function printMarks (array $marks) {
+        echo "\n";
+        list($time, $mem) = array_shift($marks);
+        foreach ($marks as $mark) {
+            list($t, $m) = $mark;
+            list($tp, $td) = $this->scale($t - $time, 0.1,  10,    1000, ['s', 'ms', 'mks', 'ns', 'ps', 'fs']);
+            list($mp, $md) = $this->scale($m,         1000, 102.4, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
+            list($dp, $dd) = $this->scale($m - $mem,  100,  10.24, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
+            printf("%6.2f %3s; %8.2f %2s (%8.2f %2s)\n",
+                $tp, $td, $mp, $md, $dp, $dd
+            );
+            $time = $t;
+            $mem  = $m;
+        }
+    }
+
+    private function scale ($number, $estim, $base, $factor, array $labels) {
+        assert('$estim > 0 && $base > 0');
+        $i = 0;
+        settype($number, 'double');
+        settype($base,   'double');
+        $dir = $estim - $base;
+        if ($dir > 0) {
+            $base *= $factor;
+            while (abs($number) >= $base) {
+                $number = $number / $factor;
+                ++$i;
+            }
+        }
+        elseif ($dir < 0) {
+            $base /= $factor;
+            while (abs($number) <= $base) {
+                $number = $number * $factor;
+                ++$i;
+            }
+        }
+        return array($number, $labels[$i]);
+    }
+
 
     public function prepare_require_init ($fname) {
         $this->addFile('init', $fname);

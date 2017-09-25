@@ -7,3 +7,7 @@ aiixtest.cmd
 /aiixform/
 /.cache
 /filters/
+/.vscode/.sftpConfig.json
+/.vscode/settings.json
+/.vscode/
+/znanika/
