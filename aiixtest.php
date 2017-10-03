@@ -56,6 +56,7 @@ class AIIXTestContext
                         $return : new AIIXTestResult($return);
         unset($return);
         $this->vars = get_defined_vars();
+        unset($this->vars['this']); // sic! 'this' could really be there
     }
 
     public function test () {
@@ -63,8 +64,15 @@ class AIIXTestContext
             AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt');
     }
 
-    protected function mark () {
-        $this->marks[] = array(microtime(true), memory_get_usage());
+    public function mark ($key = false) {
+        $mark = array(microtime(true), memory_get_usage());
+        if ($key !== false) {
+            isset($this->marks[$key]) and $key .= count($this->marks);
+            $this->marks[$key] = $mark;
+        }
+        else {
+            $this->marks[] = $mark;
+        }
     }
 }
 
@@ -471,13 +479,13 @@ class AIIXTest
     protected function printMarks (array $marks) {
         echo "\n";
         list($time, $mem) = array_shift($marks);
-        foreach ($marks as $mark) {
+        foreach ($marks as $key => $mark) {
             list($t, $m) = $mark;
             list($tp, $td) = $this->scale($t - $time, 0.1,  10,    1000, ['s', 'ms', 'mks', 'ns', 'ps', 'fs']);
             list($mp, $md) = $this->scale($m,         1000, 102.4, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
             list($dp, $dd) = $this->scale($m - $mem,  100,  10.24, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
-            printf("%6.2f %3s; %8.2f %2s (%8.2f %2s)\n",
-                $tp, $td, $mp, $md, $dp, $dd
+            printf("%6.2f %3s; %9.2f %2s (%9.2f %2s) '%s'\n",
+                $tp, $td, $mp, $md, $dp, $dd, $key
             );
             $time = $t;
             $mem  = $m;
