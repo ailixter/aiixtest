@@ -481,9 +481,9 @@ class AIIXTest
         list($time, $mem) = array_shift($marks);
         foreach ($marks as $key => $mark) {
             list($t, $m) = $mark;
-            list($tp, $td) = $this->scale($t - $time, 0.1,  10,    1000, ['s', 'ms', 'mks', 'ns', 'ps', 'fs']);
-            list($mp, $md) = $this->scale($m,         1000, 102.4, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
-            list($dp, $dd) = $this->scale($m - $mem,  100,  10.24, 1024, ['b', 'kb', 'mb', 'gb', 'tb', 'pb']);
+            list($tp, $td) = $this->scale($t - $time, 0.1,  10,    1000, array('s', 'ms', 'mks', 'ns', 'ps', 'fs'));
+            list($mp, $md) = $this->scale($m,         1000, 102.4, 1024, array('b', 'kb', 'mb', 'gb', 'tb', 'pb'));
+            list($dp, $dd) = $this->scale($m - $mem,  100,  10.24, 1024, array('b', 'kb', 'mb', 'gb', 'tb', 'pb'));
             printf("%6.2f %3s; %9.2f %2s (%9.2f %2s) '%s'\n",
                 $tp, $td, $mp, $md, $dp, $dd, $key
             );
