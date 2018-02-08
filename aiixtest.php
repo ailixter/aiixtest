@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 
 /*
@@ -25,6 +26,14 @@ class AIIXTestContext
      */
     public $vars;
     public $marks = array();
+    
+    private $forceResultClass;
+    private $defaultResultClass = 'AIIXTestResult';
+
+    public function skipChecking ($resultClass, $force = false) {
+        $this->defaultResultClass = $resultClass;
+        $this->forceResultClass = $force;
+    }
 
     public function setFilepath ($fname) {
         if (!$this->filepath = realpath($fname)) {
@@ -52,16 +61,24 @@ class AIIXTestContext
             $return = $e;
             unset($e);
         }
-        $this->return = $return instanceof AIIXTestResult ?
-                        $return : new AIIXTestResult($return);
+        $this->return = $this->makeReturn($return);
         unset($return);
         $this->vars = get_defined_vars();
         unset($this->vars['this']); // sic! 'this' could really be there
     }
 
+    protected function makeReturn ($return) {
+        $class = $this->defaultResultClass;
+        if ($this->forceResultClass) {
+            return new $class($return);
+        }
+        return $return instanceof AIIXTestResult ?
+               $return : new $class($return);
+    }
+
     public function test () {
         return $this->result = $this->return->check($this,
-            AIIXTest::CACHE.'/'.strtr($this->fname, '/:\\', '---').'.txt');
+            AIIXTest::CACHE.'/'.basename($this->fname).'.txt');
     }
 
     public function mark ($key = false) {
@@ -104,7 +121,7 @@ class AIIXTestResult
 class AIIXTestResultAssertion extends AIIXTestResult
 {
     public function check (AIIXTestContext $test, $filename) {
-        return !array_filter($this->result, array($this, 'isEmpty'));
+        return !array_filter((array)$this->result, array($this, 'isEmpty')); //???
     }
     protected function isEmpty ($result) {
         return empty($result);
@@ -131,7 +148,7 @@ class AIIXTestResultReplacePrev extends AIIXTestResult
 class AIIXTestResultDeletePrev extends AIIXTestResult
 {
     public function check (AIIXTestContext $test, $filename) {
-        unlink($filename);
+        file_exists($filename) and unlink($filename);
         return true;
     }
 }
@@ -239,6 +256,12 @@ class AIIXTest
         $context = new AIIXTestContext;
         if (!$context->setFilepath($fname)) return false;
         $this->evalPragmas('prepare', $context);
+        if ($this->sw[self::SW_RETURN_DELETE]) {
+            $context->skipChecking('AIIXTestResultDeletePrev', $this->sw[self::SW_RETURN_FORCE]);
+        }
+        elseif ($this->sw[self::SW_RETURN_IGNORE]) {
+            $context->skipChecking('AIIXTestResultReplacePrev', $this->sw[self::SW_RETURN_FORCE]);
+        }
         return $context;
     }
 
@@ -290,6 +313,9 @@ class AIIXTest
     const SW_HIDE_TEST_RETURN = 'R';
     const SW_SHORT_HEADING    = 'H';
     const SW_FAILED_ONLY      = 'X';
+    const SW_RETURN_DELETE    = 'd';
+    const SW_RETURN_IGNORE    = 'i';
+    const SW_RETURN_FORCE     = 'f';
 
     private $sw = array(
         self::SW_HIDE_INIT_OUTPUT => false,
@@ -299,7 +325,9 @@ class AIIXTest
         self::SW_HIDE_TEST_CODE   => false,
         self::SW_HIDE_TEST_RETURN => false,
         self::SW_SHORT_HEADING    => false,
-        self::SW_FAILED_ONLY      => false
+        self::SW_RETURN_DELETE    => false,
+        self::SW_RETURN_IGNORE    => false,
+        self::SW_RETURN_FORCE     => false
     );
 
     public function start () {
