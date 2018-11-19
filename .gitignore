@@ -1,6 +1,7 @@
 *
 .*
 !/aiixtest.php
+!/composer.json
 !/LICENCE
 !/README.md
 !/demo/

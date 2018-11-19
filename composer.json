@@ -1,0 +1,11 @@
+{
+    "name": "ailixter/aiixtest",
+    "description": "Description of project aiixtest.",
+    "authors": [
+        {
+            "name": "ailixter",
+            "email": "ailixter@gmail.com"
+        }
+    ],
+    "require": {}
+}
