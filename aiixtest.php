@@ -26,7 +26,7 @@ class AIIXTestContext
      */
     public $vars;
     public $marks = array();
-    
+
     private $forceResultClass;
     private $defaultResultClass = 'AIIXTestResult';
 

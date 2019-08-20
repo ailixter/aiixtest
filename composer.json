@@ -1,11 +1,13 @@
 {
     "name": "ailixter/aiixtest",
-    "description": "Description of project aiixtest.",
+    "description": "Test snippets runner.",
     "authors": [
         {
             "name": "ailixter",
             "email": "ailixter@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "PHP": ">=5.3"
+    }
 }
