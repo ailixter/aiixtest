@@ -1,11 +1,26 @@
 #  aiixtest #
 
-## php test snippets runner
+## PHP test snippets runner
 
 Yes, "snippets" means snippets. *Any valid php file* could be run, its $vars
 are printed and its return remembered and analysed.
 
-For example:
+## Installation ##
+
+```
+$ git clone https://github.com/ailixter/aiixtest.git
+cd aiixtest
+$ php aiixtest.php
+```
+or
+```
+$ php composer require-dev ailixter/aiixtest
+$ ./vendor/bin/aiixtest.php
+```
+
+[archive  could just be downloaded](https://github.com/ailixter/aiixtest/archive/master.zip) and unarchived.
+
+## Example:
 ```
 o==============================================================================o
 |   test/argv.php                                                              |
@@ -58,11 +73,3 @@ $ cd my-project
 $ php aiixtest.php my-tests
 ```
 See even more [at the wiki](https://github.com/ailixter/aiixtest/wiki)
-
-## Installation ##
-
-```
-$ git clone https://github.com/ailixter/aiixtest.git
-```
-
-The [archive  could just be downloaded](https://github.com/ailixter/aiixtest/archive/master.zip) and unarchived.
