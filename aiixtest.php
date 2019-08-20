@@ -521,7 +521,7 @@ class AIIXTest
     }
 
     private function scale ($number, $estim, $base, $factor, array $labels) {
-        assert('$estim > 0 && $base > 0');
+        // assert('$estim > 0 && $base > 0');
         $i = 0;
         settype($number, 'double');
         settype($base,   'double');
