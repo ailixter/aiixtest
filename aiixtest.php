@@ -499,8 +499,8 @@ class AIIXTest
             echo "\n";
             isset(self::$SHARED[$key]) and print('shared ');
             echo "$$key: ";
-            //var_dump($value);
-            var_export($value); echo ";\n";
+            var_dump($value);
+            // var_export($value); echo ";\n";
         }
     }
 
